@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Philippine Franchising Association · Find what fits here</title>
+
+  <!-- Leaflet (map) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet.heat (demand heatmap) -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ============ MAP ============ -->
+    <div id="map"></div>
+
+    <!-- ============ TOP BAR (brand · search · filters · actions) ============ -->
+    <header id="topbar" class="hidden">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg viewBox="0 0 60 44" width="38" height="28" aria-label="PFA">
+            <rect x="4"  y="14" width="15" height="15" rx="2.5" transform="rotate(45 11.5 21.5)" fill="#e03131"/>
+            <rect x="18" y="5"  width="15" height="15" rx="2.5" transform="rotate(45 25.5 12.5)" fill="#1971c2"/>
+            <rect x="18" y="23" width="15" height="15" rx="2.5" transform="rotate(45 25.5 30.5)" fill="#ffd43b"/>
+            <rect x="32" y="14" width="15" height="15" rx="2.5" transform="rotate(45 39.5 21.5)" fill="#1971c2"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <strong>Philippine Franchising Association</strong>
+          <span>Find the franchise that fits your spot</span>
+        </div>
+      </div>
+
+      <div class="search-cluster hidden" id="searchCluster">
+        <div class="search-wrap">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+          <input id="areaSearch" type="text" placeholder="Type a city or area, e.g. Angeles City, Makati CBD" autocomplete="off" />
+          <button id="filterToggle" class="filter-toggle" title="Filters">
+            <svg viewBox="0 0 24 24"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+            Filters <span id="filterCount" class="fcount hidden">0</span>
+          </button>
+          <button id="searchBtn">Search</button>
+          <div id="suggestions" class="suggestions"></div>
+        </div>
+
+        <!-- Filters dropdown -->
+        <div id="filtersPanel" class="filters-panel hidden">
+          <div class="fp-row">
+            <div class="fp-field">
+              <label>Budget</label>
+              <select id="fBudget">
+                <option value="any">Any budget</option>
+                <option value="u250">Under ₱250K</option>
+                <option value="250-500">₱250K to ₱500K</option>
+                <option value="500-1m">₱500K to ₱1M</option>
+                <option value="1m-5m">₱1M to ₱5M</option>
+                <option value="5m-10m">₱5M to ₱10M</option>
+                <option value="10m+">₱10M and up</option>
+              </select>
+            </div>
+            <div class="fp-field">
+              <label>Involvement</label>
+              <select id="fOwnership">
+                <option value="any">Any involvement</option>
+                <option value="owner">Owner-operated</option>
+                <option value="passive">Semi-passive</option>
+              </select>
+            </div>
+            <div class="fp-field">
+              <label>Format</label>
+              <select id="fFormat">
+                <option value="any">Any store format</option>
+                <option value="cart">Cart or kiosk</option>
+                <option value="inline">In-line or mall store</option>
+                <option value="standalone">Standalone branch</option>
+              </select>
+            </div>
+          </div>
+          <div class="fp-field">
+            <label>Business type</label>
+            <div id="fTypes" class="chips"></div>
+          </div>
+          <div class="fp-actions">
+            <button id="resetFilters" class="link-btn">Reset all</button>
+            <button id="applyFilters" class="btn primary sm">Apply</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="savedBtn" class="ghost-btn" title="Saved brands">★ Saved <span id="savedCount" class="badge">0</span></button>
+      </div>
+    </header>
+
+    <!-- ============ RESULTS PANEL ============ -->
+    <aside id="panel" class="hidden">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title" id="panelArea"></div>
+          <div class="panel-sub" id="panelSub"></div>
+        </div>
+        <button id="closePanel" class="icon-btn">✕</button>
+      </div>
+
+      <!-- AI reco summary -->
+      <div id="recoSummary" class="reco hidden"></div>
+
+      <!-- Category tabs -->
+      <div id="catTabsWrap" class="cat-tabs-wrap hidden">
+        <div id="catTabs" class="cat-tabs"></div>
+      </div>
+
+      <div id="results" class="results"></div>
+      <div id="reverseResults" class="reverse-results hidden"></div>
+    </aside>
+
+    <!-- ============ LANDING (screen 1 — standalone website) ============ -->
+    <div id="landing">
+      <nav class="lp-nav">
+        <div class="lp-brand">
+          <span class="pfa-mark" aria-hidden="true">
+            <svg viewBox="0 0 60 44" width="40" height="29">
+              <rect x="4"  y="14" width="15" height="15" rx="2.5" transform="rotate(45 11.5 21.5)" fill="#e03131"/>
+              <rect x="18" y="5"  width="15" height="15" rx="2.5" transform="rotate(45 25.5 12.5)" fill="#1971c2"/>
+              <rect x="18" y="23" width="15" height="15" rx="2.5" transform="rotate(45 25.5 30.5)" fill="#ffd43b"/>
+              <rect x="32" y="14" width="15" height="15" rx="2.5" transform="rotate(45 39.5 21.5)" fill="#1971c2"/>
+            </svg>
+          </span>
+          <span>Philippine Franchising Association</span>
+        </div>
+        <div class="lp-nav-links">
+          <a href="#how">How it works</a>
+          <a href="#brands">Brands</a>
+        </div>
+      </nav>
+
+      <div class="lp-main">
+        <section class="lp-hero">
+          <h1>Find the right<br>franchise for you<br>in under 2 minutes</h1>
+          <button id="enterApp" class="cta-primary lg">Check My Location</button>
+        </section>
+        <div class="lp-cluster" id="lpLogoStrip" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <!-- ============ WHERE-TO-FRANCHISE SEARCH (screen 2) ============ -->
+    <div id="welcome" class="hidden">
+      <div class="welcome-card">
+        <h1>Where do you want to franchise?</h1>
+        <p>Type your city or area and instantly see which franchise brands fit, ranked by competition, foot traffic, and local demand.</p>
+        <div class="welcome-search">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+          <input id="welcomeSearch" type="text" placeholder="Enter a city or area" autocomplete="off" />
+          <button id="welcomeGo">Search</button>
+        </div>
+        <div class="welcome-cities">
+          <span>Or pick a city</span>
+          <div class="welcome-city-list">
+            <button class="quick" data-area="Angeles City">Angeles City</button>
+            <button class="quick" data-area="Makati CBD">Makati CBD</button>
+            <button class="quick" data-area="Quezon City">Quezon City</button>
+            <button class="quick" data-area="Cebu City">Cebu City</button>
+            <button class="quick" data-area="Davao City">Davao City</button>
+            <button class="quick" data-area="Iloilo City">Iloilo City</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ SEARCH RADIUS CONTROL ============ -->
+    <div id="radiusControl" class="radius-control hidden">
+      <span class="rc-label">Radius</span>
+      <button data-r="500">500m</button>
+      <button data-r="1000" class="on">1km</button>
+      <button data-r="2000">2km</button>
+      <button data-r="3000">3km</button>
+    </div>
+
+    <!-- ============ MAP STATUS (selected franchise) ============ -->
+    <div id="mapStatus" class="hidden"></div>
+
+    <!-- ============ ONE-TIME MAP HINT ============ -->
+    <div id="mapHint" class="map-hint hidden">👆 Click any spot on the map to analyze it</div>
+
+    <!-- ============ LEGEND (also toggles map layers) ============ -->
+    <div id="legend" class="hidden">
+      <div class="legend-head">Map layers <span>tap to toggle</span></div>
+      <div class="legend-row" data-layer="center"><span class="ring-swatch"></span> Search area</div>
+      <div class="legend-row" data-layer="heat"><span class="heat-swatch"></span> Demand heatmap</div>
+      <div class="legend-row" data-layer="competitors"><span class="dot comp"></span> Existing competitors</div>
+      <div class="legend-row hidden" id="legendSelected" data-layer="selected"><span class="pin-swatch"></span> <span id="legendSelectedLabel">Selected branches</span></div>
+      <div class="legend-row" data-layer="anchors" title="Malls, schools, offices, hospitals and transit hubs that pull customers to the area"><span class="dot anchor"></span> Key landmarks</div>
+    </div>
+
+    <!-- ============ AI ASSISTANT (orb + mini chat) ============ -->
+    <button id="assistantOrb" class="hidden" title="Ask Fran, the PFA assistant">
+      <span class="orb-spark">✦</span>
+    </button>
+    <div id="assistantChat" class="assistant-chat hidden">
+      <div class="chat-head">
+        <div class="chat-id"><span class="orb-mini">✦</span> Fran <span class="chat-sub">· PFA assistant</span></div>
+        <div class="chat-head-actions">
+          <button id="chatSpeak" class="icon-btn sm" title="Read answers aloud">🔊</button>
+          <button id="chatClose" class="icon-btn sm">✕</button>
+        </div>
+      </div>
+      <div id="chatLog" class="chat-log"></div>
+      <div class="chat-suggest" id="chatSuggest"></div>
+      <div class="chat-input">
+        <input id="chatInput" type="text" placeholder="Ask, or tap the mic to speak" />
+        <button id="chatMic" title="Speak your question">🎤</button>
+        <button id="chatSend" title="Send">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODALS ============ -->
+  <div id="detailModal" class="modal hidden"><div class="modal-card" id="detailCard"></div></div>
+  <div id="contactModal" class="modal hidden"><div class="modal-card contact" id="contactCard"></div></div>
+  <div id="savedModal" class="modal hidden"><div class="modal-card saved" id="savedCard"></div></div>
+  <div id="scoreModal" class="modal hidden"><div class="modal-card score-modal" id="scoreCard"></div></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
