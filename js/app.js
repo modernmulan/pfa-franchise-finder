@@ -798,7 +798,7 @@ function openChat() {
   $("#assistantChat").classList.remove("hidden");
   $("#assistantOrb").classList.add("hidden");
   if (!state.chat.length) {
-    pushChat("bot", "Hi, I'm Fran. Happy to answer any questions you have about franchising... let's find the right one for you!");
+    pushChat("bot", "Hi, I'm Fran! Ask me anything about franchising. Let's find the right fit for you.");
   }
   renderSuggest();
   setTimeout(() => $("#chatInput").focus(), 50);
