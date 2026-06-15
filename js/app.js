@@ -839,12 +839,15 @@ function speakAnswer(html) {
   synth.cancel();
   const u = new SpeechSynthesisUtterance(text);
   const voices = synth.getVoices();
-  // prefer a warm, natural-sounding English voice for "Fran"
-  const prefer = ["Samantha", "Google US English", "Microsoft Aria", "Aria", "Microsoft Jenny", "Jenny", "Victoria", "Karen", "Moira", "Tessa"];
+  // a warm British woman for "Fran" (names vary by OS/browser)
+  const prefer = ["Google UK English Female", "Microsoft Libby Online (Natural) - English (United Kingdom)",
+    "Microsoft Sonia Online (Natural) - English (United Kingdom)", "Microsoft Libby", "Microsoft Sonia",
+    "Microsoft Hazel", "Serena", "Kate", "Stephanie", "Martha", "Fiona"];
   const byName = prefer.map(n => voices.find(v => v.name && v.name.includes(n))).find(Boolean);
-  const en = byName || voices.find(v => /^en[-_]US/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang));
-  if (en) { u.voice = en; u.lang = en.lang; } else { u.lang = "en-US"; }
-  u.rate = 1.02; u.pitch = 1.05;
+  const gbFemale = voices.find(v => /^en[-_]GB/i.test(v.lang) && /female|libby|sonia|hazel|serena|kate|stephanie|martha|fiona|amy|emma/i.test(v.name));
+  const voice = byName || gbFemale || voices.find(v => /^en[-_]GB/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang));
+  if (voice) { u.voice = voice; u.lang = voice.lang; } else { u.lang = "en-GB"; }
+  u.rate = 0.98; u.pitch = 1.08;
   synth.speak(u);
 }
 
