@@ -759,19 +759,21 @@ function detectCategory(q) {
   return null;
 }
 
-/* Turn raw fit components into natural spoken phrases (not templated bullets) */
-function reasonsFor(c) {
+/* Turn raw fit components into natural spoken phrases, with the real numbers. */
+function reasonsFor(fit, catName) {
+  const c = fit.components;
+  const n = fit.rivals ? fit.rivals.direct : 0;
   return {
     good: [
-      c.competition > 0.6 && "there aren't many direct rivals nearby",
+      c.competition > 0.6 && `only about ${n} direct ${catName} ${n === 1 ? "rival" : "rivals"} within your radius`,
       c.saturation > 0.6 && "the category's still underserved around here",
       c.traffic > 0.7 && "foot traffic is strong",
       c.demand > 0.7 && "local spending power fits the price point",
     ].filter(Boolean),
     bad: [
-      c.competition < 0.45 && "it's already pretty crowded with rivals",
-      c.saturation < 0.4 && "the category's quite saturated here",
-      c.traffic < 0.5 && "foot traffic is on the quieter side",
+      c.competition < 0.45 && `there are already about ${n} ${catName} ${n === 1 ? "spot" : "spots"} within your radius`,
+      c.saturation < 0.4 && `${catName} is pretty saturated in this area`,
+      c.traffic < 0.5 && "foot traffic here is on the quieter side",
       c.demand < 0.55 && "the price point doesn't quite match local spending",
     ].filter(Boolean),
   };
@@ -797,14 +799,14 @@ function answerAsk(qRaw) {
   }
   if (/why not|why isn'?t|why.*low|bad|avoid/.test(q) && cat) {
     const fit = scoreBrand(CATALOG.find(b => b.category === cat), area, state.filters);
-    const bad = reasonsFor(fit.components).bad;
+    const bad = reasonsFor(fit, lc(cat)).bad;
     return bad.length
       ? `Honestly, ${lc(cat)} is a tough one here — ${bad.slice(0, 2).join(", and ")}. That's why it's only landing around ${fit.score}/100 for me.`
       : `Actually, ${lc(cat)} holds up okay here — about ${fit.score}/100, nothing that worries me.`;
   }
   if (cat) {
     const fit = scoreBrand(CATALOG.find(b => b.category === cat), area, state.filters);
-    const good = reasonsFor(fit.components).good;
+    const good = reasonsFor(fit, lc(cat)).good;
     const verdict = fit.score >= 70 ? "looks like a strong bet" : fit.score >= 55 ? "could definitely work" : "would be a bit of a stretch";
     let r = `${CATEGORIES[cat].label} ${verdict} here — I'd put it around ${fit.score}/100.`;
     if (good.length) r += ` ${cap(good.slice(0, 2).join(", and "))}.`;
