@@ -759,6 +759,24 @@ function detectCategory(q) {
   return null;
 }
 
+/* Turn raw fit components into natural spoken phrases (not templated bullets) */
+function reasonsFor(c) {
+  return {
+    good: [
+      c.competition > 0.6 && "there aren't many direct rivals nearby",
+      c.saturation > 0.6 && "the category's still underserved around here",
+      c.traffic > 0.7 && "foot traffic is strong",
+      c.demand > 0.7 && "local spending power fits the price point",
+    ].filter(Boolean),
+    bad: [
+      c.competition < 0.45 && "it's already pretty crowded with rivals",
+      c.saturation < 0.4 && "the category's quite saturated here",
+      c.traffic < 0.5 && "foot traffic is on the quieter side",
+      c.demand < 0.55 && "the price point doesn't quite match local spending",
+    ].filter(Boolean),
+  };
+}
+
 /* Fran's answers: warm, first-person, conversational, but to the point. */
 function answerAsk(qRaw) {
   const q = qRaw.toLowerCase();
@@ -766,6 +784,7 @@ function answerAsk(qRaw) {
   if (!area) return "Search an area first and I'll tell you what fits there.";
   const cat = detectCategory(q);
   const lc = (c) => CATEGORIES[c].label.toLowerCase();
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
   if (/categor|what.*best|what.*fit|recommend|top/.test(q) && !cat) {
     const cats = rankCategories(area, state.filters, state.results).slice(0, 3);
@@ -777,18 +796,20 @@ function answerAsk(qRaw) {
       + `<button class="link-inline" data-reverse="${cat}">Want the full ranking?</button>`;
   }
   if (/why not|why isn'?t|why.*low|bad|avoid/.test(q) && cat) {
-    const brand = CATALOG.find(b => b.category === cat);
-    const fit = scoreBrand(brand, area, state.filters);
-    const cons = fit.rationale.filter(r => !r.good);
-    return cons.length
-      ? `Honestly, ${lc(cat)} is a tough sell here — ${cons.map(c => c.text.toLowerCase().replace(/\.$/, "")).join(", and ")}. It lands around ${fit.score}/100.`
-      : `Actually ${lc(cat)} isn't bad here at all — it scores ${fit.score}/100, no real red flags.`;
+    const fit = scoreBrand(CATALOG.find(b => b.category === cat), area, state.filters);
+    const bad = reasonsFor(fit.components).bad;
+    return bad.length
+      ? `Honestly, ${lc(cat)} is a tough one here — ${bad.slice(0, 2).join(", and ")}. That's why it's only landing around ${fit.score}/100 for me.`
+      : `Actually, ${lc(cat)} holds up okay here — about ${fit.score}/100, nothing that worries me.`;
   }
   if (cat) {
-    const brand = CATALOG.find(b => b.category === cat);
-    const fit = scoreBrand(brand, area, state.filters);
-    const pros = fit.rationale.filter(r => r.good).map(r => r.text.toLowerCase().replace(/\.$/, ""));
-    return `${CATEGORIES[cat].label} looks ${fit.score >= 70 ? "strong" : fit.score >= 55 ? "decent" : "a bit risky"} here — about ${fit.score}/100. ` + (pros.length ? `What's working: ${pros.slice(0, 2).join(", and ")}.` : "Not much going for it, to be honest.");
+    const fit = scoreBrand(CATALOG.find(b => b.category === cat), area, state.filters);
+    const good = reasonsFor(fit.components).good;
+    const verdict = fit.score >= 70 ? "looks like a strong bet" : fit.score >= 55 ? "could definitely work" : "would be a bit of a stretch";
+    let r = `${CATEGORIES[cat].label} ${verdict} here — I'd put it around ${fit.score}/100.`;
+    if (good.length) r += ` ${cap(good.slice(0, 2).join(", and "))}.`;
+    else r += " It just doesn't have much going for it at this spot.";
+    return r;
   }
   const top = rankCatalog(area, state.filters).slice(0, 3);
   return `My top picks for ${area.name} are ${joinList(top.map(t => `<b>${t.brand.name}</b>`))}. Ask me "why not [category]?" and I'll walk you through it.`;
